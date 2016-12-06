@@ -1,0 +1,183 @@
+<html>
+<script src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
+
+<script src='https://api.mapbox.com/mapbox.js/v3.0.1/mapbox.js'></script>
+<link href='https://api.mapbox.com/mapbox.js/v3.0.1/mapbox.css' rel='stylesheet' />
+<style>
+	#map {
+		position: absolute;
+		top: 30;
+		bottom: 0;
+		width: 100%;
+	}
+</style>
+
+<body>
+	<div id='map'></div>
+	<div id="fishControls">
+
+		<input type="number" id="lat" value="24.23" />,
+		<input type="number" id="lng" value="23.12" />
+		<button id="query">搜索</button>
+
+
+
+
+	</div>
+
+	<!-- Message log -->
+
+</body>
+<script src="https://www.gstatic.com/firebasejs/3.3.0/firebase.js"></script>
+
+<!-- GeoFire -->
+<script src="https://cdn.firebase.com/libs/geofire/4.1.2/geofire.min.js"></script>
+
+
+
+<script>
+	(function () {
+		// Initialize the Firebase SDK
+		var config = {
+			apiKey: "AIzaSyD4tmn55ah5a6rc8AXI1Q6yxSW8ph-kriE",
+			authDomain: "geotest-188a9.firebaseapp.com",
+			databaseURL: "https://geotest-188a9.firebaseio.com",
+			storageBucket: "geotest-188a9.appspot.com",
+			messagingSenderId: "419327468300"
+		};
+		firebase.initializeApp(config);
+
+		// Generate a random Firebase location
+		var firebaseRef = firebase.database().ref()
+
+		var randomGeoPoints = generateRandomPoints({
+			'lat': 24.23,
+			'lng': 23.12
+		}, 200*1000, 10);
+
+
+		var obj = [];
+		for (var i = 0; i < 10; i++) {
+			obj.push({
+				id: i,
+				name: "rest" + i
+			})
+			var name = firebaseRef.child("restaurant").push(obj[i]).key;
+
+			console.log(name)
+			var geoFire = new GeoFire(firebaseRef.child("geo"));
+			geoFire.set(name, convert(randomGeoPoints[i])).then(function () {
+
+			});
+		}
+
+
+		$('#query').on('click', function () {
+			var lat = $('#lat').val();
+			var lng = $('#lng').val();
+
+			//alert(lat + "," + lng)
+
+			var geoFire = new GeoFire(firebaseRef.child("geo"));
+			var geoQuery = geoFire.query({
+				center: [23.12, 24.23],
+				radius: 100
+			});
+
+
+			var onReadyRegistration = geoQuery.on("ready", function () {
+				console.log("GeoQuery has loaded and fired all other events for initial data");
+			});
+
+			var onKeyEnteredRegistration = geoQuery.on('key_entered', function (key, location, distance) {
+				//console.log(location);
+				//console.log(key + " entered query at " + location + " (" + distance + " km from center)");
+				
+				addMark(location)
+			})
+			var onKeyEnteredRemoved = geoQuery.on('key_exited', function (key, location, distance) {
+				//console.log(location);
+				console.log(key + " removed");
+				
+				map.removeLayer(location)
+			})
+
+		})
+
+
+
+		// MAPBOX PRACTICE
+
+		L.mapbox.accessToken = 'pk.eyJ1IjoicjYwNDc3MzYiLCJhIjoiY2l3Y3h2em5hMDYzMjJ0bzVkeDFsZW1uZCJ9.ML6FolNWBzw2o9zmSIQaQA';
+		// Create a map in the div #map
+		var map = L.mapbox.map('map', 'mapbox.streets')
+		.addControl(L.mapbox.geocoderControl('mapbox.places', {
+        autocomplete: true
+    }));;
+		map.on('error', function (err) {
+			console.log(err)
+		})
+
+		map.on('ready', function () {
+			
+		});
+
+		//addMark([12,13])
+		
+		
+		function addMark(pos){
+			L.marker(pos, {
+				icon: L.mapbox.marker.icon({
+					'marker-size': 'large',
+					'marker-symbol': 'bus',
+					'marker-color': '#fa0'
+				})
+			}).addTo(map);
+		}
+
+
+
+
+		function generateRandomPoints(center, radius, count) {
+			var points = [];
+			for (var i = 0; i < count; i++) {
+				points.push(generateRandomPoint(center, radius));
+			}
+			return points;
+		}
+
+		function generateRandomPoint(center, radius) {
+			var x0 = center.lng;
+			var y0 = center.lat;
+			// Convert Radius from meters to degrees.
+			var rd = radius / 111300;
+
+			var u = Math.random();
+			var v = Math.random();
+
+			var w = rd * Math.sqrt(u);
+			var t = 2 * Math.PI * v;
+			var x = w * Math.cos(t);
+			var y = w * Math.sin(t);
+
+			var xp = x / Math.cos(y0);
+
+			// Resulting point.
+			return {
+				'lat': y + y0,
+				'lng': xp + x0
+			};
+		}
+
+		function convert(pos) {
+			return [pos['lng'], pos['lat']];
+		}
+
+
+		//	console.log(randomGeoPoints);
+
+
+	})();
+</script>
+
+</html>
